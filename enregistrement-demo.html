@@ -7,39 +7,36 @@
 	</head>
 
 	<body>
-		<div class='cadre_onde'>
-            <canvas class='canvas' width=810 height=50></canvas>
-            <div class='onde_curseur'></div>
+		<div id='cadre_onde'>
+            <canvas id='canvas' width=810 height=50></canvas>
+            <div id='onde_curseur'></div>
         </div>
 		
 
-		<div class='cadre_controles_audio'>
-            <div class='audio_record bouton_audio' onclick='etudiantEnregistreur.recordBouton(this)'>
+		<div id='cadre_controles_audio'>
+            <div id='audio_record' class='bouton_audio' onclick='etudiantEnregistreur.recordBouton(this)'>
                 <img src='../icones/record1.svg'>
             </div>
             
-            <div class='audio_stop bouton_audio' onclick='etudiantEnregistreur.stopBouton()'>
+            <div id='audio_stop' class='bouton_audio' onclick='etudiantEnregistreur.stopBouton()'>
                 <img src='../icones/stop1.svg'>
             </div>
             
-             <div class='audio_rewind bouton_audio' onclick='etudiantEnregistreur.appuyerReculer()'>
+             <div id='audio_rewind' class='bouton_audio' onclick='etudiantEnregistreur.appuyerReculer()'>
                 <img src='../icones/forward1.svg'>
             </div>
-            <div class='audio_play bouton_audio' onclick='etudiantEnregistreur.playPauseBouton(this)'>
+            <div id='audio_play' class='bouton_audio' onclick='etudiantEnregistreur.playPauseBouton(this)'>
                 <img src='../icones/play1.svg'>
             </div>
            
-            <div class='audio_forward bouton_audio' onclick='etudiantEnregistreur.appuyerAvancer()'>
+            <div id='audio_forward' class='bouton_audio' onclick='etudiantEnregistreur.appuyerAvancer()'>
                 <img src='../icones/forward1.svg'>
             </div>
         
-            <div class='cadran'>
+            <div id='cadran'>
             
             </div>
-            
-            <div class='messages'>
-            </div>
-            
+
         </div>
 	</body>
 </html>
@@ -47,12 +44,12 @@
 <script>
 	var etudiantEnregistreur = function() {
 
-	    	var boutonRecord = document.getElementsByClassName('audio_record')[0];
-	    	var boutonStop = document.getElementsByClassName('audio_stop')[0];
-	    	var boutonPlay = document.getElementsByClassName('audio_play')[0];
-	    	var cadran = document.getElementsByClassName('cadran')[0];
-	    	var cadreOnde = document.getElementsByClassName('cadre_onde')[0];    
-	    	var canevas = document.getElementsByClassName('canvas')[0];
+	    	var boutonRecord = document.getElementById('audio_record');
+	    	var boutonStop = document.getElementById('audio_stop');
+	    	var boutonPlay = document.getElementById('audio_play');
+	    	var cadran = document.getElementById('cadran');
+	    	var cadreOnde = document.getElementById('cadre_onde');    
+	    	var canevas = document.getElementById('canvas');
 
 	    	var recordedAudio;
 		    var count = 0;
@@ -78,7 +75,7 @@
 		    var analyserContext = null;    
 
 		    var dureeAudio = null;
-		    var curseur = document.getElementsByClassName('onde_curseur')[0];
+		    var curseur = document.getElementById('onde_curseur');
 		    var offsetCurseur = 0; //en ms
 		    var curseurWidth = curseur.offsetWidth;
 		    var temps = 0;

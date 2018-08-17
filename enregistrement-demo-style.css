@@ -12,7 +12,7 @@ font-family:'digital-clock-font-mono';
 }
 
 
-.cadre_onde {
+#cadre_onde {
 	position: absolute;
     background-color: darkgrey;
     top: 50px;
@@ -25,14 +25,14 @@ font-family:'digital-clock-font-mono';
 }
 
 
-.canvas {
+#canvas {
 	position: absolute;
     width: 100%;
     height: 50px;
     right: 0px;
 }
 
-.onde_curseur {
+#onde_curseur {
     position: absolute;
     height: 100%;
     width: 3px;
@@ -42,7 +42,7 @@ font-family:'digital-clock-font-mono';
     pointer-events: none;
 }
 
-.cadre_controles_audio {
+#cadre_controles_audio {
 	position: absolute;
     top: 105px;
     height: 47px;
@@ -76,16 +76,16 @@ font-family:'digital-clock-font-mono';
 
 }
 
-.audio_record {
+#audio_record {
 	position: absolute;
     left: 35%;
 }
 
-.audio_stop {
+#audio_stop {
     left: 40%;
 }
 
-.audio_rewind {
+#audio_rewind {
     left: 50%;
     -webkit-transform: translate(-0, -50%) scaleX(-1);
     -ms-transform: translate(-0, -50%) scaleX(-1);
@@ -94,17 +94,17 @@ font-family:'digital-clock-font-mono';
 }
 
 
-.audio_play {
+#audio_play {
     left: 55%;
 }
 
 
-.audio_forward {
+#audio_forward {
     left: 60%;
    
 }
 
-.cadran {
+#cadran {
     position: absolute;
     right: 0px;
     height: 25px;
