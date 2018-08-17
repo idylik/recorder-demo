@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Web Audio API Demo</title>
+	    <meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+	    <link rel="stylesheet" type="text/css" href="enregistrement-demo-style.css">
+	</head>
+
+	<body>
+		<div class='cadre_onde'>
+            <canvas class='canvas' width=810 height=50></canvas>
+            <div class='onde_curseur'></div>
+        </div>
+		
+
+		<div class='cadre_controles_audio'>
+            <div class='audio_record bouton_audio' onclick='etudiantEnregistreur.recordBouton(this)'>
+                <img src='../icones/record1.svg'>
+            </div>
+            
+            <div class='audio_stop bouton_audio' onclick='etudiantEnregistreur.stopBouton()'>
+                <img src='../icones/stop1.svg'>
+            </div>
+            
+             <div class='audio_rewind bouton_audio' onclick='etudiantEnregistreur.appuyerReculer()'>
+                <img src='../icones/forward1.svg'>
+            </div>
+            <div class='audio_play bouton_audio' onclick='etudiantEnregistreur.playPauseBouton(this)'>
+                <img src='../icones/play1.svg'>
+            </div>
+           
+            <div class='audio_forward bouton_audio' onclick='etudiantEnregistreur.appuyerAvancer()'>
+                <img src='../icones/forward1.svg'>
+            </div>
+        
+            <div class='cadran'>
+            
+            </div>
+            
+            <div class='messages'>
+            </div>
+            
+        </div>
+	</body>
+</html>
+
+<script>
+	var etudiantEnregistreur = function() {
+
+    	var boutonRecord = document.getElementsByClassName('audio_record')[0];
+    	var boutonStop = document.getElementsByClassName('audio_stop')[0];
+    	var boutonPlay = document.getElementsByClassName('audio_play')[0];
+    	var cadran = document.getElementsByClassName('cadran')[0];
+    	var cadreOnde = document.getElementsByClassName('cadre_onde')[0];    
+    	var canevas = document.getElementsByClassName('canvas')[0];
+
+    	var recordedAudio;
+	    var count = 0;
+
+	    var type = 'audio/wav';
+
+	    var recBuffersL = [];
+	    var recBuffersR = [];
+
+
+	    //NODES (globales)
+	    var inputNode;
+	    var gainNode;
+	    var processNode;
+
+	    var recording = false;
+	    var playing = false;
+
+
+	    var inputLength = 4096;
+	    var audioCtx = new AudioContext();
+	    var sampleRate;
+	    var analyserContext = null;    
+
+	    var dureeAudio = null;
+	    var curseur = document.getElementsByClassName('onde_curseur')[0];
+	    var offsetCurseur = 0; //en ms
+	    var curseurWidth = curseur.offsetWidth;
+	    var temps = 0;
+	    var tempsDepartRecord = 0;
+	    var tempsIntervalle;
+	    var longueurAvancerReculer = 1000;
+
+
+	    var cadreOndeWidth = cadreOnde.getBoundingClientRect().width -2; //à cause de la bordure
+    	window.onresize = function() {
+            //updater les valeurs clés:
+            cadreOndeWidth = cadreOnde.getBoundingClientRect().width - 2; //à cause de la bordure
+        }
+
+
+        //INIT:
+        init();
+        function init() {
+            sampleRate = audioCtx.sampleRate;
+            try {
+                window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!navigator.getUserMedia) navigator.getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.mediaDevices.getUserMedia;
+                window.URL = window.URL || window.webkitURL;
+            } catch (e) {
+                console.log(e);
+            }
+
+            navigator.getUserMedia ({"audio": 
+                        {"mandatory": 
+                            {"googNoiseSuppression": "true" 
+                            }}}, startUserMedia, function(e) {
+                alert('Error getting audio..');
+                console.log(e);
+            });
+        }
+
+
+
+	 function startUserMedia(stream) {
+	        inputNode = audioCtx.createMediaStreamSource(stream);
+	        gainNode = audioCtx.createGain();
+	        gainNode.gain.value = 1.0;
+	        processNode = audioCtx.createScriptProcessor(inputLength, 2, 2);
+	        processNode.onaudioprocess = processAudio;
+	        inputNode.connect(gainNode);
+	        gainNode.connect(processNode);
+	        processNode.connect(audioCtx.destination);
+	    }
+
+	    function processAudio(e) {
+	        if (recording) {
+	            //console.log(count);
+	            //comme L et R sont identiques, on prend juste L
+	            recBuffersL[count] = new Float32Array(inputLength);
+	            e.inputBuffer.copyFromChannel(recBuffersL[count], 0);
+	            count++;
+	        }
+	    }
+	  
+
+
+	    function appuyerAvancer() {
+	        if (!recording) {
+	        temps += 1000;
+	        avancerReculer(temps);
+	        }
+	    }
+
+
+	    function appuyerReculer() {
+	        if (!recording) {
+	        temps -= 1000;
+	        avancerReculer(temps);
+	            }
+	    }
+
+	    function avancerReculer(t) {
+	        if (!recording) {
+	            if (recordedAudio) {
+	                if (t < 0) {
+	                    t = temps = 0;
+	                }
+	                if (t > recordedAudio.duration*1000) {
+	                    t = temps = recordedAudio.duration*1000;
+	                }
+
+	                positionCurseur(t);
+	                setCadran(t);
+
+	                if (playing===true) {
+	                    source.stop();
+	                    clearInterval(tempsIntervalle);
+	                    tempsIntervalle = null;
+	                    jouerSon(t);
+	                    }
+	                }
+	            }
+	    }    
+
+	    function playPauseBouton() { 
+	        if (playing === true) {
+	            playing = false;
+	            clearInterval(tempsIntervalle);
+	            source.stop();
+	            return;
+	        }
+	        if (recording === true) {
+	            return;
+	        }
+	        if (playing === false && recording === false && recordedAudio) {
+	            jouerSon(temps);
+	        }
+	    }
+
+
+	    function recordBouton(bouton) {
+	        if (playing === true) {
+	            return;
+	        }
+
+	        if (recording === false) {
+	            //commence à enregistrer:
+	            recording = true; //on doit enregistrer à partir de la position du curseur
+	            tempsDepartRecord = temps;
+	            boutonRecord.firstElementChild.style.backgroundColor = 'red';
+	            //intervalle qui update le compteur de temps
+	            tempsIntervalle = setInterval(function(){
+	                temps += 100; //en ms
+	                //cadran
+	                setCadran(temps);
+	                //bouger curseur si recordedAudio et si le curseur n'est pas déjà au bout
+	                if (recordedAudio) {
+	                    positionCurseur(temps);
+	                    }
+	                }, 100)
+	            }
+	    }
+
+	    function stopBouton() {
+	         if (playing === true) {
+	            playing = false;
+	            clearInterval(tempsIntervalle);
+	            source.stop();
+	        }
+
+	        if (recording === true) {
+	            clearInterval(tempsIntervalle);
+	            recording = false;
+	            boutonRecord.firstElementChild.style.backgroundColor = 'transparent';
+	            mergeData(recBuffersL,count);
+	            dessinerOnde(canevas.width, canevas.height, canevas.getContext('2d'), recordedAudio.getChannelData(0));
+	            count=0;
+	            recBuffersL = [];
+	            //remet le curseur et le temps au début
+	            temps=0;
+	            positionCurseur(temps);
+	            setCadran(temps);
+	        }
+	    }
+
+	    //Lorsqu'on clique pour déplacer le curseur:
+	     cadreOnde.onmousedown = function(event) {
+	         if (recordedAudio) {
+	            //if playing === true:
+	            if (playing===true && recording===false) {
+	                //calcule nouveau temps
+	                temps = Math.max(event.offsetX*recordedAudio.duration*1000/cadreOndeWidth, 0);
+
+	                //console.log("event.offsetX: "+event.offsetX);
+	                //déplace curseur
+	                positionCurseur(temps);
+	                setCadran(temps);
+	                //arrête la lecture
+	                source.stop();
+	                clearInterval(tempsIntervalle);
+	                tempsIntervalle = null;
+	                //repart la lecture
+	                jouerSon(temps);
+	            }
+	            //if recording === true:
+	            if (playing===false && recording===true) {
+	                //fait rien
+	            }
+	            //if stopped === true:
+	            if (playing===false && recording===false) {
+	                //console.log("event.offsetX: "+event.offsetX);
+	                //calcule nouveau temps
+	                temps = Math.max(event.offsetX*recordedAudio.duration*1000/cadreOndeWidth, 0);
+	                //déplace le curseur
+	                positionCurseur(temps);
+	                setCadran(temps);
+	            }
+	        }
+	    }    
+
+
+	     //crée une nouvelle source et la joue
+	     function jouerSon(t) {
+	        source = audioCtx.createBufferSource();  
+	        source.buffer = recordedAudio;
+	        source.connect(audioCtx.destination);
+	        playing = true;
+	        source.start(0, temps/1000); //en secondes
+
+	        tempsIntervalle = setInterval(function(){
+	            temps += 100; //en millisecondes
+	            //si on est rendus au bout 
+	            if (temps > recordedAudio.duration*1000) {
+	                clearInterval(tempsIntervalle);
+	                playing=false;
+	                temps = 0;
+	                setCadran(temps);
+	                positionCurseur(temps);
+	            }
+	            //updater la position du curseur:
+	            positionCurseur(temps);
+	            setCadran(temps);
+	        },100);
+	     }
+
+	    //calcule offsetCurseur et déplace le curseur en fonction du temps
+	    function positionCurseur(t) {
+	        //le offsetCurseur se déplace seulement de 0 à (cadreOndeWith moins largeur du curseur):
+	        offsetCurseur = t*(cadreOndeWidth-curseurWidth)/(recordedAudio.duration*1000);
+	        curseur.style.left = offsetCurseur > cadreOndeWidth-curseurWidth ? cadreOndeWidth - curseurWidth + "px" : offsetCurseur + "px";
+
+	    }
+
+	    function setCadran(t) {
+	        var tempsEnregistrement;
+	        if (recordedAudio) {
+	            tempsEnregistrement = Math.round(recordedAudio.duration*1000) } else {
+	            tempsEnregistrement = 0;
+	        }
+	        cadran.innerHTML = convertisseurTemps(t) + " / " + convertisseurTemps (tempsEnregistrement);
+	    }
+
+
+	    function convertisseurTemps(tempsMs) {
+	        //il faut arrondir le temps
+	        var milliSecondesTotal = tempsMs;
+	        var milliSecondesShowed = Math.floor((tempsMs%1000)/100); // le restant
+	        var secondesTotal = Math.floor(milliSecondesTotal/1000);
+	        var secondesShowed = secondesTotal%60;
+	        var minutesShowed = Math.floor(secondesTotal/60);
+
+	        minutesShowed = minutesShowed < 10 ? "0" + minutesShowed : minutesShowed;
+	        secondesShowed = secondesShowed < 10 ? "0" + secondesShowed : secondesShowed;
+
+	        if (tempsMs < 0) {
+	            minutesShowed = "00";
+	            secondesShowed = "00";
+	            milliSecondesShowed = "0";
+	            }
+	        return minutesShowed+":"+secondesShowed+"."+milliSecondesShowed;
+	    }
+
+
+	    //Flatten toutes les données dans un seul array et copie chaque channel dans recordedAudio
+	    function mergeData(s, c) {
+	        var len=0;
+	        var bufLength = s.length*inputLength;
+	        var buf = new Float32Array(bufLength);
+	        for (var i=0; i<c; i++) {
+	            buf.set(s[i], len); //copie les valeurs dans buf depuis recBuffersL/R, à partir de 
+	            len+=s[i].length; //multiples de 4096
+	            };
+
+	        //S'il n'y a pas déjà un enregistrement pour cet essai-là:
+	        if (!recordedAudio) {
+	            recordedAudio = audioCtx.createBuffer(2, bufLength, sampleRate);
+	        } else {
+	            //calculer la position où il faudra insérer dans l'array:
+	            var ancienBufferLength = recordedAudio.length;
+	            var posArray = Math.round(tempsDepartRecord*ancienBufferLength/(recordedAudio.duration*1000));        
+
+	            //Si le nouvel enregistrement dépasse l'ancien:
+	            if (posArray+bufLength >= ancienBufferLength) {
+	                var newBufLength = posArray+bufLength;
+	                var newBuf = new Float32Array(newBufLength);
+	                var ancienBuffer = recordedAudio.getChannelData(0);
+	                newBuf.set(ancienBuffer,0); //recopie tout l'ancien buffer
+	                newBuf.set(buf, posArray); //insère le nouveau buffer à la bonne position
+	                buf = newBuf;
+	                recordedAudio = audioCtx.createBuffer(2, newBufLength, sampleRate);
+	            } else {
+	                var ancienBuf = recordedAudio.getChannelData(0);
+	                ancienBuf.set(buf, posArray); //insère le nouveau buf à la bonne pos
+	                buf = ancienBuf;
+	            }
+	        }
+
+	        //insérer l'enregistrement dans l'audio buffer:
+	        recordedAudio.copyToChannel(buf, 0, 0);
+	        recordedAudio.copyToChannel(buf, 1, 0); 
+
+    	}
+
+	   	//il faut donner à cette fonction un Float32Array (flattened)
+	    function dessinerOnde( width, height, context, data ) {
+	        var step = Math.ceil( data.length / width );
+	        var amp = height / 2;
+	        context.fillStyle = "black";
+	        context.clearRect(0,0,width,height);
+	        for(var i=0; i < width; i++){
+	            var min = 1.0;
+	            var max = -1.0;
+	            for (j=0; j<step; j++) {
+	                //prend la plus petite et la plus grande valeur de cette intervalle
+	                var datum = data[(i*step)+j];
+	                if (datum < min)
+	                    min = datum; //ex: min = -0.03
+	                if (datum > max) //ex: max = +0.05
+	                    max = datum;
+	            }
+	            //dessine un rectangle
+	            context.fillRect(
+	                i, //position x
+	                (1+min)*amp, //position y
+	                1, //largeur de 1px
+	                //plus grand nombre entre 1 et (max-min)*amp
+	                Math.max(1,(max-min)*amp)); //hauteur
+		        }
+		    }  
+
+		return {
+			temps: temps,
+	        avancerReculer: avancerReculer,
+	        playPauseBouton: playPauseBouton,
+	        appuyerAvancer: appuyerAvancer,
+	        appuyerReculer: appuyerReculer,
+	        recordBouton: recordBouton,
+	        stopBouton: stopBouton,
+	        init:init
+		}
+	}();
+</script>
