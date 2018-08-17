@@ -1,4 +1,6 @@
-Simple web recorder and player using the HTML5 Web Audio API
+Simple web recorder and player using the HTML5 Web Audio API.
+
+It works best in Chrome.
 
 Live Demo: https://www.audiostat.ca/archive/enregistrement-demo.html
 
